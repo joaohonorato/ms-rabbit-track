@@ -1,0 +1,157 @@
+server:
+  port: ${port:8081}
+
+spring:
+  application:
+    name: ${name:partners-purchase-order-tracking}
+  profiles:
+    active: ${profiles_active:local}
+  data:
+    mongodb:
+      uri: ${mongodb_uri:mongodb://root:password@localhost:27017/partners-purchase-order-tracking?authSource=admin&maxIdleTimeMS=15000}
+  rabbitmq:
+    addresses: ${rabbit_addresses:localhost:5672}
+    username: ${rabbit_username:guest}
+    password: ${rabbit_password:guest}
+    virtual-host: ${rabbit_virtualhost:/}
+  cloud:
+    stream:
+      bindings:
+        subscribeExchangePartnersPurchaseOrderRequested:
+          destination: x-partners-purchase-order-requested
+          group: partners-purchase-order-tracking
+          consumer:
+            maxAttempts: 1
+
+        subscribeExchangePartnersPurchaseOrderRequestedWithWait:
+          destination: x-partners-purchase-order-requested.wait
+          group: partners-purchase-order-tracking
+          consumer:
+            maxAttempts: 1
+
+        subscribeExchangeVMIStockRequested:
+          destination: x-vmi-leroy-batch-requested
+          group: vmi-leroy-tracking
+          consumer:
+            maxAttempts: 1
+
+        subscribeExchangeVMIStockRequestedWithWait:
+          destination: x-vmi-leroy-batch-requested.wait
+          group: vmi-leroy-tracking
+          consumer:
+            maxAttempts: 1
+            
+        publishPartnersPurchaseOrderAvailable:
+          destination: x-partners-purchase-order-available
+
+        publishVMIRequestedWithWait:
+          destination:  x-vmi-stock-requested.wait
+
+        publishVMIStockAvailable:
+          destination: x-vmi-stock-available
+
+        publishVMIOperationError:
+          destination: x-vmi-stock-tracking-operation-error
+          
+        publishOperationError:
+          destination: x-partners-purchase-order-tracking-operation-error
+          
+        publishDataRequestedWithWait:
+          destination:  x-partners-purchase-order-requested.wait
+   
+      rabbit:
+        bindings:
+          subscribeExchangePartnersPurchaseOrderRequested:
+            consumer:
+              ttl: ${rabbitmq_ttlInMilliseconds:3600000}
+              autoBindDlq: true
+              republishToDlq: true
+              requeueRejected: false
+              deadLetterExchange: x-partners-purchase-order-tracking-operation-error
+              deadLetterExchangeType: fanout
+              dlqExpires: ${rabbitmq_dlqExpires:1000}
+              exchangeType: fanout
+              prefetch: ${rabbitmq_prefetch:1}
+          subscribeExchangePartnersPurchaseOrderRequestedWithWait:
+            consumer:
+              ttl: ${rabbitmq_ttlInMilliseconds:3600000}
+              autoBindDlq: true
+              republishToDlq: true
+              requeueRejected: false
+              deadLetterExchange: x-partners-purchase-order-tracking-operation-error
+              deadLetterExchangeType: fanout
+              dlqExpires: ${rabbitmq_dlqExpires:1000}
+              delayedExchange: true
+              prefetch: ${rabbitmq_prefetch:1}
+          subscribeExchangeVMIStockRequested:
+            consumer:
+              ttl: ${rabbitmq_ttlInMilliseconds:3600000}
+              autoBindDlq: true
+              republishToDlq: true
+              requeueRejected: false
+              deadLetterExchange: x-vmi-leroy-batch-requested-error
+              deadLetterExchangeType: fanout
+              dlqExpires: ${rabbitmq_dlqExpires:1000}
+              exchangeType: fanout
+              prefetch: ${rabbitmq_prefetch:1}
+          subscribeExchangeVMIStockRequestedWithWait:
+            consumer:
+              ttl: ${rabbitmq_ttlInMilliseconds:3600000}
+              autoBindDlq: true
+              republishToDlq: true
+              requeueRejected: false
+              deadLetterExchange: x-vmi-leroy-batch-requested-error
+              deadLetterExchangeType: fanout
+              dlqExpires: ${rabbitmq_dlqExpires:1000}
+              delayedExchange: true
+              prefetch: ${rabbitmq_prefetch:1}
+          publishPartnersPurchaseOrderAvailable:
+            producer:
+              exchangeType: fanout
+          publishOperationError:
+            producer:
+              exchangeType: fanout
+          publishDataRequestedWithWait:
+            producer:
+              exchangeType: fanout
+              delayedExchange: true
+          publishVMIStockAvailable:
+            producer:
+              exchangeType: fanout
+              
+      binders:
+        rabbit_local:
+          type: rabbit
+          environment:
+            spring:
+              rabbitmq:
+                host: ${rabbit_host:localhost}
+                port: ${rabbit_port:5672}
+                username: ${rabbit_username:guest}
+                password: ${rabbit_password:guest}
+                virtual-host: /
+
+management:
+  endpoints:
+    web:
+      base-path: /
+      path-mapping:
+        health: healthcheck
+  endpoint:
+    health:
+      show-details: "ALWAYS"
+      
+app:
+  rabbitmq:
+    delayInMilliseconds: ${app_rabbitmq_delayInMilliseconds:900000} # 15 minutes
+    maximumNumberOfRetries: ${app_rabbitmq_maximumNumberOfRetries:3}
+  microServiceClient:
+    apiKey: ${app_microServiceClient_apiKey:123456}
+    url: ${app_microServiceClient_url:http://localhost:8080/v1/example}
+
+info:
+  build:
+    groupId: '@project.groupId@'
+    artifactId: '@project.artifactId@'
+    version: '@project.version@'
+    date: '@timestamp@'
